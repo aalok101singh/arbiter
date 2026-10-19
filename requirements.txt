@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+razorpay
+python-dotenv
+cryptography
+playwright
+requests
+pydantic

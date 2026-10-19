@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Arbiter Payment Generator</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; }
+        button { padding: 1rem 2rem; font-size: 1.2rem; cursor: pointer; }
+        #log { margin-top: 2rem; background: #f0f0f0; padding: 1rem; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Arbiter — Create a Test Payment</h1>
+    <p>Click below to generate a fresh Razorpay order and pay.</p>
+
+    <button id="pay">Create & Pay ₹500</button>
+    <pre id="log"></pre>
+
+    <script>
+        const ARBITER_PROXY = ""; // your FastAPI address
+        const logEl = document.getElementById("log");
+
+        const params = new URLSearchParams(window.location.search);
+        const amountFromUrl = parseInt(params.get("amount") || "50000", 10);
+
+        function log(msg) {
+            logEl.textContent += msg + "\n";
+            console.log(msg);
+        }
+
+        document.getElementById("pay").onclick = async function () {
+            logEl.textContent = "";
+            log("Requesting new order from Arbiter proxy...");
+
+            try {
+                const res = await fetch(`${ARBITER_PROXY}/v1/create_order`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ amount: amountFromUrl })
+                });
+
+                if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+                const data = await res.json();
+                log(`New Order ID: ${data.order_id}`);
+
+                const options = {
+                    key: "rzp_test_TpXECgxnrs5SOw", // your test Key ID
+                    amount: data.amount,
+                    currency: "INR",
+                    name: "Arbiter Test",
+                    description: "Payment for the Arbiter guard",
+                    order_id: data.order_id, // the fresh order ID
+                    prefill: {
+                        name: "Test User",
+                        email: "test@arbiter.dev",
+                        contact: "8208519183"
+                    },
+                    handler: function (response) {
+                        log(`SUCCESS`);
+                        log(`Payment ID: ${response.razorpay_payment_id}`);
+                        log(`Order ID: ${response.razorpay_order_id}`);
+                        log(`Copy the Payment ID above — paste it into test_refund.py or your guard.`);
+                    },
+                    modal: {
+                        ondismiss: function () { log("Checkout closed by user."); }
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+
+            } catch (err) {
+                log(`FAILED: ${err.message}`);
+                log("Is the Arbiter proxy running on port 8000?");
+            }
+        };
+    </script>
+</body>
+</html>

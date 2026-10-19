@@ -1,0 +1,18 @@
+# Secrets (NEVER commit these)
+.env
+keys/ledger.key
+
+# Generated Data (created locally when scripts run)
+data/arbiter.db
+data/ledger.jsonl
+data/payments.json
+data/replay_results.json
+
+# Python Crap
+__pycache__/
+*.pyc
+.venv/
+
+# Debug files
+debug_fail_*.png
+debug_log_timeout_*.png
