@@ -11,11 +11,20 @@ It is a runtime control layer that sits between an AI agent and a payment gatewa
 3. **The Ledger** (`app/ledger.py`): Every proposed action and every result is signed with Ed25519 and appended to a hash chain before the payment gateway is called.
 4. **The Verifier** (`scripts/verify.py`): A 60-line, dependency-light script that proves the ledger has not been tampered with. 
 
-## What it catches that payment limits miss:
-- **Refund Loops**: 40 valid $5 refunds is a loop. Limits see 40 valid transactions.
-- **Idempotency**: The agent retries a failed request. Limits see two valid payments.
-- **Credential Laundering**: Sub-agents bypassing parent limits.
-- **Read-then-Exfiltrate**: (Partially handled in v0.1 via strict payload logging).
+## What it catches (Tested in v0.1)
+- **Refund Loops**: An agent tries to refund the same payment multiple times.
+- **Idempotency (Duplicates)**: An agent retries a failed request with the same key.
+- **Velocity Spikes**: Too many refunds in a short window (scoped per agent).
+- **New Payee Escalation**: Blocking a large transfer to an unknown destination until human review.
+- **Payee Cap Bypass**: Blocking cumulative refunds to a single merchant that exceed a daily threshold.
+
+## What is NOT yet covered (Roadmap for v0.2+)
+- **Credential Laundering**: Sub-agents bypassing parent limits (requires nested delegation tracking).
+- **Read-then-Exfiltrate**: Detecting data exfiltration in payload memos (requires NLP analysis).
+
+## Honest Limits: Tier Definitions
+- **Tier C (Current v0.1)**: The enforcing proxy holds the payment gateway API keys. It is safe against the *agent*, but if the operator gives the agent the raw API keys, it can bypass the guard.
+- **Tier A (Manifesto Vision)**: A production deployment where a customer-controlled HSM brokers task-scoped, short-lived tokens so the agent never even sees the keys.
 
 ## Quickstart
 
@@ -24,20 +33,12 @@ It is a runtime control layer that sits between an AI agent and a payment gatewa
 3. Copy `.env.example` to `.env` and add your Razorpay Test Keys.
 4. Generate the signing keys: `python scripts/genkey.py`
 5. Start the server: `uvicorn app.main:app --reload`
-6. Open `http://127.0.0.1:8000/` in your browser to test a manual payment.
+6. Open `http://127.0.0.1:8000/` in your browser.
 
-## The Replay Demo (How to prove it works)
+## The Replay Demo
 
 To generate the automated evidence report:
-
-1. Generate 7 captured test payments: 
-   `python scripts/seed_payments.py 7`
-2. Fire the 5 attack scenarios at the guard: 
-   `python scripts/replay.py`
-3. Generate the HTML report: 
-   `python scripts/report.py`
-4. Verify the evidence log is untampered: 
-   `python scripts/verify.py`
-
-## Honest Limits (Tier C)
-In v0.1, we demonstrate Tier C enforcement. The agent *could* technically bypass the proxy if it had the raw Razorpay keys. Tier A (credential broker + Hardware Security Module) eliminates this risk but requires production deployment. We ship Tier C first because it is installable without re-architecting a company's entire payment path.
+1. `python scripts/seed_payments.py 7`
+2. `python scripts/replay.py`
+3. `python scripts/report.py`
+4. `python scripts/verify.py`

@@ -39,7 +39,8 @@ ARBITER_MODE = os.getenv("ARBITER_MODE", "enforce")
 
 @app.get("/")
 def checkout_page():
-    return FileResponse(Path(__file__).parent.parent / "checkout.html")
+    # UPDATED: Pointing to the frontend/ folder
+    return FileResponse(Path(__file__).parent.parent / "frontend" / "checkout.html")
 
 
 class RefundRequest(BaseModel):
